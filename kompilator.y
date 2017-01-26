@@ -200,33 +200,33 @@ void mul()
 {
 	int r1 = first_free_register-1;
 	int r2 = first_free_register-2;
-	int r3 = first_free_register-3;
+	int r3 = first_free_register;
 	int r0 = 0;
 	generate_value(0,r0);
 	resultCode.push_back("STORE "+convertInt(r2));
-	generate_value(0, r3);
+	resultCode.push_back("LOAD "+convertInt(r3));
+	generate_value(0, r2);
 	int temp = resultCode.size();
-	resultCode.push_back("JZERO "+convertInt(r2)+" "+convertInt(temp+11));
+	resultCode.push_back("JZERO "+convertInt(r3)+" "+convertInt(temp+11));
 	resultCode.push_back("JZERO "+convertInt(r1)+" "+convertInt(temp+11));
 	resultCode.push_back("JODD "+convertInt(r1)+" "+convertInt(temp+6));
 	resultCode.push_back("SHR "+convertInt(r1));
-	resultCode.push_back("SHL "+convertInt(r2));	
+	resultCode.push_back("SHL "+convertInt(r3));	
 	resultCode.push_back("JUMP "+convertInt(temp+1));
 
-	resultCode.push_back("STORE "+convertInt(r2));
+	resultCode.push_back("STORE "+convertInt(r3));
 
-	resultCode.push_back("ADD "+convertInt(r3));
+	resultCode.push_back("ADD "+convertInt(r2));
 	resultCode.push_back("SHR "+convertInt(r1));
-	resultCode.push_back("SHL "+convertInt(r2));
+	resultCode.push_back("SHL "+convertInt(r3));
 	resultCode.push_back("JUMP "+convertInt(temp+1));
-	resultCode.push_back("PUT "+convertInt(r3));
 	first_free_register--;
 }
 
 void div(){
 	int r1 = first_free_register-1;
 	int r2 = first_free_register-2;
-	int r3 = first_free_register-3;
+	int r3 = first_free_register;
 	int r0 = 0;
 	generate_value(0,r0);
 	resultCode.push_back("STORE "+convertInt(r1));
@@ -240,8 +240,9 @@ void div(){
 	resultCode.push_back("JUMP "+convertInt(temp+3));
 	resultCode.push_back("INC "+convertInt(r1));
 	
-
-	resultCode.push_back("PUT "+convertInt(r1));
+	generate_value(0,r0);
+	resultCode.push_back("STORE "+convertInt(r1));
+	resultCode.push_back("LOAD "+convertInt(r2));
 	first_free_register--;
 }
 
