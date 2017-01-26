@@ -36,6 +36,7 @@ void loadIdentifier();
 void add();
 void sub();
 void mul();
+void div();
 
 
 int errors = 0;
@@ -143,7 +144,9 @@ expression:
 	| value MUL value {
 		mul();
 		}
-	| value DIV value {;}
+	| value DIV value {
+		div();
+		}
 	| value MOD value {;}
 ;
 condition:
@@ -217,6 +220,28 @@ void mul()
 	resultCode.push_back("SHL "+convertInt(r2));
 	resultCode.push_back("JUMP "+convertInt(temp+1));
 	resultCode.push_back("PUT "+convertInt(r3));
+	first_free_register--;
+}
+
+void div(){
+	int r1 = first_free_register-1;
+	int r2 = first_free_register-2;
+	int r3 = first_free_register-3;
+	int r0 = 0;
+	generate_value(0,r0);
+	resultCode.push_back("STORE "+convertInt(r1));
+	int temp = resultCode.size();
+	resultCode.push_back("JODD "+convertInt(r1)+" "+convertInt(temp+7));
+	resultCode.push_back("JZERO "+convertInt(r1)+" "+convertInt(temp+8));
+	generate_value(0,r1);
+	resultCode.push_back("JZERO "+convertInt(r2)+" "+convertInt(temp+8));
+	resultCode.push_back("SUB "+convertInt(r2));
+	resultCode.push_back("INC "+convertInt(r1));
+	resultCode.push_back("JUMP "+convertInt(temp+3));
+	resultCode.push_back("INC "+convertInt(r1));
+	
+
+	resultCode.push_back("PUT "+convertInt(r1));
 	first_free_register--;
 }
 
