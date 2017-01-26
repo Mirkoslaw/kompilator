@@ -43,6 +43,7 @@ void mul();
 void div();
 
 void equal();
+void not_equal();
 
 
 int errors = 0;
@@ -166,7 +167,10 @@ condition:
 		equal();
 		first_free_register--;
 		}
-	| value NEQUAL value {;}
+	| value NEQUAL value {
+		not_equal();
+		first_free_register--;
+		}
 	| value SMALLER value {;}
 	| value GREATER value {;}
 	| value LEQUAL value {;}
@@ -266,7 +270,6 @@ void div(){
 void equal(){
 	int r1 = first_free_register-1;
 	int r2 = first_free_register-2;
-	int r3 = first_free_register;
 	int r0 = 0;
 	jumpStack.push(resultCode.size());
 	generate_value(0,r0);//r0=0
@@ -285,6 +288,26 @@ void equal(){
 	resultCode.push_back("ZERO "+convertInt(r1));
 	resultCode.push_back("JUMP "+convertInt(temp+4));
 	resultCode.push_back("INC "+convertInt(r1));
+	jumpStack.push(resultCode.size());
+	resultCode.push_back("JZERO "+convertInt(r1)+" ");
+}
+
+void not_equal(){
+	int r1 = first_free_register-1;
+	int r2 = first_free_register-2;
+	int r0 = 0;
+	jumpStack.push(resultCode.size());
+	generate_value(0,r0);//r0=0
+	resultCode.push_back("STORE "+convertInt(r2));//copy r2 to P(r0=0)
+
+	resultCode.push_back("INC "+convertInt(r0));//r0=1
+	resultCode.push_back("STORE "+convertInt(r1));//copy r1 to P(r0=1)
+	resultCode.push_back("SUB "+convertInt(r2));//sub r2 - r1 
+	
+	resultCode.push_back("DEC "+convertInt(r0));//r0=0
+	resultCode.push_back("SUB "+convertInt(r1)); //sub r1 - r2
+	resultCode.push_back("STORE "+convertInt(r2));
+	resultCode.push_back("ADD "+convertInt(r1)); //add new r1 to new r2
 	jumpStack.push(resultCode.size());
 	resultCode.push_back("JZERO "+convertInt(r1)+" ");
 }
