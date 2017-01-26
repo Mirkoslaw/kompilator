@@ -14,9 +14,11 @@ void yyerror (char const *s);
 typedef struct {
 	string name;
 	int address;
-	bool declared;
+	bool initialized;
+	bool loop_var;
 	long long used_memory;
 	int memoryIndex;
+	bool is_array;
 } Symbol;
 
 bool check_if_var_was_declared(string symbol_name);
@@ -26,13 +28,15 @@ void assign(string symbol_name);
 void load(string token);
 void loadVar(string symbol_name);
 void write(string symbol_name);
+void read(string symbol_name);
 void make_registers_free();
 void generate_value(int number, int register_number);
 int get_first_free_register();
 Symbol getVariable(string symbol_name);
 int getVariableIndex(string symbol_name);
 string convertInt(int value);
-void loadIdentifier();
+void loadIdentifier(string symbol_name);
+void loadArrayVar(string symbol_name, string index);
 void add();
 void sub();
 void mul();
@@ -105,8 +109,7 @@ vdeclarations:
 		declare_variable($<str>2);
 	}
 	|vdeclarations PIDENTIFIER LBRACKET NUM RBRACKET {
-		// declare_array($<str>2, $<num>4);
-		;
+		declare_array($<str>2, $<str>4);
 		}
 	| 
 ;
@@ -125,7 +128,9 @@ command:
 	| WHILE condition DO commands ENDWHILE {;}
 	| FOR PIDENTIFIER FROM value TO value DO commands ENDFOR {;}
 	| FOR PIDENTIFIER FROM value DOWNTO value commands ENDFOR {;}
-	| READ identifier SEMICOLON{;}
+	| READ identifier SEMICOLON{
+		read($<str>2);
+		}
 	| WRITE value SEMICOLON{
 		write($<str>2) ;
 		}
@@ -161,13 +166,15 @@ condition:
 value:
 	NUM {load($<str>1);}
 	|identifier {
-		loadIdentifier();
+		loadIdentifier($<str>1);
 	}
 ;
 
 identifier:
 	PIDENTIFIER {loadVar($<str>1);}
-	|PIDENTIFIER LBRACKET PIDENTIFIER RBRACKET {;}
+	|PIDENTIFIER LBRACKET PIDENTIFIER RBRACKET {
+		loadArrayVar($<str>1, $<str>2);
+		}
 	|PIDENTIFIER LBRACKET NUM RBRACKET {;}
 ;
 
@@ -246,6 +253,40 @@ void div(){
 	first_free_register--;
 }
 
+void equal(){
+	int r1 = first_free_register-1;//0
+	int r2 = first_free_register-2;//1
+	int r3 = first_free_register;//2
+	int r0 = 0;
+
+	generate_value(0,r0);
+	resultCode.push_back("STORE "+convertInt(r2));//copy 1 to 2
+
+	resultCode.push_back("INC "+convertInt(r0));//r0=1
+	resultCode.push_back("STORE "+convertInt(r1));//sub 1 0
+	resultCode.push_back("SUB "+convertInt(r2));//sub r1-r2
+	
+	resultCode.push_back("DEC "+convertInt(r0));//r0=0
+	resultCode.push_back("SUB "+convertInt(r2)); 
+	resultCode.push_back("STORE "+convertInt(r3));
+	int temp = resultCode.size();
+}
+
+void div2(){
+	int r1 = first_free_register-1;
+	int r2 = first_free_register-2;
+	int r3 = first_free_register;
+	int r0 = 0;
+	generate_value(0, r0);
+	resultCode.push_back("STORE "+convertInt(r2));
+	int temp = resultCode.size();
+	resultCode.push_back("JZERO "+convertInt(r2)+" "+convertInt(temp+8));
+	resultCode.push_back("JZERO "+convertInt(r1)+" "+convertInt(temp+8));
+	resultCode.push_back("SHL "+convertInt(r1));
+	resultCode.push_back("SUB "+convertInt(r1));
+	resultCode.push_back("JZERO "+convertInt(r1)+" "+convertInt(temp+2));
+}
+
 void assign(string symbol_name)
 {
 	if(check_if_var_was_declared(symbol_name)){
@@ -254,7 +295,7 @@ void assign(string symbol_name)
 		first_free_register--;
 		resultCode.push_back("COPY "+convertInt(first_free_register-1));
 		resultCode.push_back("STORE "+convertInt(first_free_register));
-		symbolTable.at(index).declared = true;
+		symbolTable.at(index).initialized = true;
 		first_free_register--;
 	}
 }
@@ -268,25 +309,59 @@ void load(string token)
 
 void loadVar(string symbol_name)
 {
+	if(!check_if_var_was_declared(symbol_name)){
+		errors++;
+		cout<<"BLAD: Uzycie niezadeklarowanej zmiennej "+symbol_name<<endl;
+		exit(1);
+	}
 	Symbol symbol = getVariable(symbol_name);
 	int address = symbol.memoryIndex;
 	generate_value(address, first_free_register);
 	first_free_register++;
 }
-void loadIdentifier()
+void loadIdentifier(string symbol_name)
 {
 	resultCode.push_back("COPY "+convertInt(first_free_register-1))	;
 	resultCode.push_back("LOAD "+convertInt(first_free_register-1));
 }
 
+void loadArrayVar(string symbol_name, string index){
+
+	Symbol symbol = getVariable(symbol_name);
+	if(!symbol.is_array){
+		cout<<"Blad: Nieprawidlowe uzycie zmiennej "+symbol_name+ " "<<endl;
+		exit(1);
+	}
+}
+
 void write(string symbol_name)
 {
-	if(check_if_var_was_declared(symbol_name)){
-		Symbol sym = getVariable(symbol_name);
-		if(sym.declared){
-			resultCode.push_back("PUT "+ convertInt(first_free_register-1));
-			first_free_register--;
-		}
+	if(!check_if_var_was_declared(symbol_name)){
+		exit(1);
+	}
+	Symbol sym = getVariable(symbol_name);
+		// if(sym.loop_var){
+	resultCode.push_back("PUT "+ convertInt(first_free_register-1));
+	first_free_register--;
+		// }
+}
+
+void read(string symbol_name){
+
+	if(!check_if_var_was_declared(symbol_name)){
+		errors++;
+		cout<<"Błąd: Użycie niezadeklarowanej zmiennej "+symbol_name<<endl;
+		exit(1);
+	}
+	int loop_var = 0;
+	if(loop_var==0){
+		resultCode.push_back("GET "+convertInt(first_free_register));
+		resultCode.push_back("COPY "+convertInt(first_free_register-1));
+		resultCode.push_back("STORE "+convertInt(first_free_register));
+		first_free_register--;
+		
+	} else {
+
 	}
 }
 
@@ -319,8 +394,10 @@ void declare_variable(string symbol_name)
 			symbol_name,
 			NULL,
 			false,
+			false,
 			1,
-			used_memory++
+			used_memory++,
+			false
 		};
 		symbolTable.push_back(symbol);
 	} else {
@@ -335,14 +412,16 @@ void declare_variable(string symbol_name)
 */
 void declare_array(string symbol_name, string size)
 {
-	int size_int = stoi(size);
+	int size_int = stol(size);
 	if(!check_if_var_was_declared(symbol_name)){
 		Symbol symbol = {
 			symbol_name,
 			NULL,
 			false,
+			false,
 			size_int,
-			used_memory+=size_int
+			used_memory+=size_int,
+			true,
 		};
 		symbolTable.push_back(symbol);
 	} else {
@@ -446,5 +525,5 @@ int main()
 void yyerror (char const *s)
 {
 	errors++;
-	printf ("%s\n", s);
+	printf ("%s %d\n", s, yylineno);
 }

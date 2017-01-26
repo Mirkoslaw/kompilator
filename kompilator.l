@@ -36,8 +36,8 @@ WRITE		{return (WRITE);}
 "/"			{return (DIV);}
 "*"			{return (MUL);}
 "%"			{return (MOD);}
-"("			{return (LBRACKET);}
-")"			{return (RBRACKET);}
+"["			{return (LBRACKET);}
+"]"			{return (RBRACKET);}
 
 "="		{return (EQUAL);}
 "<>"		{return (NEQUAL);}
