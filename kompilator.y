@@ -132,7 +132,16 @@ command:
 		jumpStack.pop();
 		jumpStack.pop();
 		}
-	| IF condition THEN commands ELSE commands ENDIF {;}
+	| IF condition THEN commands{} ELSE{
+		resultCode.at(jumpStack.top())+=convertInt(resultCode.size()+1);
+		jumpStack.pop();
+		jumpStack.push(resultCode.size());
+		resultCode.push_back("JUMP ");
+	} commands ENDIF {
+		resultCode.at(jumpStack.top())+=convertInt(resultCode.size());
+		jumpStack.pop();
+		jumpStack.pop();
+		;}
 	| WHILE condition DO commands ENDWHILE {;}
 	| FOR PIDENTIFIER FROM value TO value DO commands ENDFOR {;}
 	| FOR PIDENTIFIER FROM value DOWNTO value commands ENDFOR {;}
