@@ -141,8 +141,13 @@ command:
 		resultCode.at(jumpStack.top())+=convertInt(resultCode.size());
 		jumpStack.pop();
 		jumpStack.pop();
+		}
+	| WHILE condition DO commands ENDWHILE {
+		resultCode.at(jumpStack.top())+=convertInt(resultCode.size()+1);
+		jumpStack.pop();
+		resultCode.push_back("JUMP "+convertInt(jumpStack.top()));
+		jumpStack.pop();
 		;}
-	| WHILE condition DO commands ENDWHILE {;}
 	| FOR PIDENTIFIER FROM value TO value DO commands ENDFOR {;}
 	| FOR PIDENTIFIER FROM value DOWNTO value commands ENDFOR {;}
 	| READ identifier SEMICOLON{
